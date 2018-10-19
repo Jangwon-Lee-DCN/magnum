@@ -34,12 +34,18 @@ if [ -n "$ETCD_VOLUME_SIZE" ] && [ "$ETCD_VOLUME_SIZE" -gt 0 ]; then
 
 fi
 
-_prefix=${CONTAINER_INFRA_PREFIX:-docker.io/openstackmagnum/}
-atomic install \
---system-package no \
---system \
---storage ostree \
---name=etcd ${_prefix}etcd:${ETCD_TAG}
+if [ "$(echo "${INSTALL_DISABLED}" | tr '[:upper:]' '[:lower:]')" = "false" ]; then
+    _prefix=${CONTAINER_INFRA_PREFIX:-docker.io/openstackmagnum/}
+    atomic install \
+    --system-package no \
+    --system \
+    --storage ostree \
+    --name=etcd ${_prefix}etcd:${ETCD_TAG}
+else
+    systemctl daemon-reload
+    systemctl enable etcd
+    systemctl start etcd
+fi
 
 if [ -z "$KUBE_NODE_IP" ]; then
     # FIXME(yuanying): Set KUBE_NODE_IP correctly

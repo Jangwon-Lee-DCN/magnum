@@ -111,7 +111,8 @@ class K8sFedoraTemplateDefinition(k8s_template_def.K8sTemplateDefinition):
                       'etcd_tag', 'flannel_tag',
                       'cloud_provider_enabled',
                       'prometheus_tag',
-                      'grafana_tag']
+                      'grafana_tag',
+                      'install_disabled']
 
         for label in label_list:
             label_value = cluster.labels.get(label)

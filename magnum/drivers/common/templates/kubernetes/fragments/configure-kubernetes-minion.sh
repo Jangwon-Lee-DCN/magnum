@@ -25,8 +25,13 @@ EOF
     fi
 fi
 
-atomic install --storage ostree --system --system-package=no --set=ADDTL_MOUNTS=${_addtl_mounts} --name=kubelet ${_prefix}kubernetes-kubelet:${KUBE_TAG}
-atomic install --storage ostree --system --system-package=no --name=kube-proxy ${_prefix}kubernetes-proxy:${KUBE_TAG}
+if [ "$(echo "${INSTALL_DISABLED}" | tr '[:upper:]' '[:lower:]')" = "false" ]; then
+    atomic install --storage ostree --system --system-package=no --set=ADDTL_MOUNTS=${_addtl_mounts} --name=kubelet ${_prefix}kubernetes-kubelet:${KUBE_TAG}
+    atomic install --storage ostree --system --system-package=no --name=kube-proxy ${_prefix}kubernetes-proxy:${KUBE_TAG}
+else
+    atomic uninstall kube-apiserver kube-controller-manager kube-scheduler etcd
+    rm -rf /etc/etcd
+fi
 
 CERT_DIR=/etc/kubernetes/certs
 PROTOCOL=https
@@ -184,8 +189,11 @@ KUBE_PROXY_ARGS="--kubeconfig=${PROXY_KUBECONFIG} --cluster-cidr=${PODS_NETWORK_
 EOF
 
 if [ "$NETWORK_DRIVER" = "flannel" ]; then
-    atomic install --storage ostree --system --system-package=no \
-    --name=flanneld ${_prefix}flannel:${FLANNEL_TAG}
+    if [ "$(echo "${INSTALL_DISABLED}" | tr '[:upper:]' '[:lower:]')" = "false" ]; then
+        atomic install --storage ostree --system --system-package=no \
+        --name=flanneld ${_prefix}flannel:${FLANNEL_TAG}
+    fi
+
     if [ "$TLS_DISABLED" = "True" ]; then
         FLANNEL_OPTIONS=""
         ETCD_CURL_OPTIONS=""
@@ -219,3 +227,4 @@ KUBERNETES_MASTER=$KUBE_MASTER_URI
 EOF
 
 hostname `hostname | sed 's/.novalocal//'`
+systemctl restart --no-block kube-proxy

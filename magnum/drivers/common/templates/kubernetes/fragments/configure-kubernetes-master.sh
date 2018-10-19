@@ -6,13 +6,15 @@ echo "configuring kubernetes (master)"
 
 _prefix=${CONTAINER_INFRA_PREFIX:-docker.io/openstackmagnum/}
 
-mkdir -p /opt/cni
-_addtl_mounts=',{"type":"bind","source":"/opt/cni","destination":"/opt/cni","options":["bind","rw","slave","mode=777"]}'
-atomic install --storage ostree --system --set=ADDTL_MOUNTS=${_addtl_mounts} --system-package=no --name=kubelet ${_prefix}kubernetes-kubelet:${KUBE_TAG}
-atomic install --storage ostree --system --system-package=no --name=kube-apiserver ${_prefix}kubernetes-apiserver:${KUBE_TAG}
-atomic install --storage ostree --system --system-package=no --name=kube-controller-manager ${_prefix}kubernetes-controller-manager:${KUBE_TAG}
-atomic install --storage ostree --system --system-package=no --name=kube-scheduler ${_prefix}kubernetes-scheduler:${KUBE_TAG}
-atomic install --storage ostree --system --system-package=no --name=kube-proxy ${_prefix}kubernetes-proxy:${KUBE_TAG}
+if [ "$(echo "${INSTALL_DISABLED}" | tr '[:upper:]' '[:lower:]')" = "false" ]; then
+    mkdir -p /opt/cni
+    _addtl_mounts=',{"type":"bind","source":"/opt/cni","destination":"/opt/cni","options":["bind","rw","slave","mode=777"]}'
+    atomic install --storage ostree --system --set=ADDTL_MOUNTS=${_addtl_mounts} --system-package=no --name=kubelet ${_prefix}kubernetes-kubelet:${KUBE_TAG}
+    atomic install --storage ostree --system --system-package=no --name=kube-apiserver ${_prefix}kubernetes-apiserver:${KUBE_TAG}
+    atomic install --storage ostree --system --system-package=no --name=kube-controller-manager ${_prefix}kubernetes-controller-manager:${KUBE_TAG}
+    atomic install --storage ostree --system --system-package=no --name=kube-scheduler ${_prefix}kubernetes-scheduler:${KUBE_TAG}
+    atomic install --storage ostree --system --system-package=no --name=kube-proxy ${_prefix}kubernetes-proxy:${KUBE_TAG}
+fi
 
 CERT_DIR=/etc/kubernetes/certs
 
@@ -44,7 +46,7 @@ users:
 EOF
 
 
-if [ "$NETWORK_DRIVER" = "flannel" ]; then
+if [ "$NETWORK_DRIVER" = "flannel" ] && [ "$(echo "${INSTALL_DISABLED}" | tr '[:upper:]' '[:lower:]')" = "false" ]; then
     atomic install --storage ostree --system --system-package=no \
     --name=flanneld ${_prefix}flannel:${FLANNEL_TAG}
 fi
@@ -196,3 +198,5 @@ sed -i '
 /^KUBELET_HOSTNAME=/ s/=.*/=""/
 /^KUBELET_ARGS=/ s|=.*|="'"\$(/etc/kubernetes/get_require_kubeconfig.sh) ${KUBELET_ARGS}"'"|
 ' /etc/kubernetes/kubelet
+
+systemctl restart --no-block kube-*

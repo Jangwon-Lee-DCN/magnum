@@ -276,6 +276,11 @@ parameters:
     type: boolean
     description: Enable or disable the openstack kubernetes cloud provider
 
+  install_disabled:
+    type: boolean
+    description: Enable or disable atomic install
+    default: False
+
 resources:
 
   minion_wait_handle:
@@ -349,6 +354,7 @@ resources:
             $KUBELET_OPTIONS: {get_param: kubelet_options}
             $KUBEPROXY_OPTIONS: {get_param: kubeproxy_options}
             $OCTAVIA_ENABLED: {get_param: octavia_enabled}
+            $INSTALL_DISABLED: {get_param: install_disabled}
 
   install_openstack_ca:
     type: OS::Heat::SoftwareConfig

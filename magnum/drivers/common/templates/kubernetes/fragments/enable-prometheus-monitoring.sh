@@ -220,7 +220,7 @@ spec:
       serviceAccountName: prometheus
       containers:
       - name: prometheus
-        image: ${CONTAINER_INFRA_PREFIX:-docker.io/prom/}prometheus:${PROMETHEUS_TAG}
+        image: ${CONTAINER_INFRA_PREFIX:-docker.io/prom/}prometheus:v1.8.2
         args:
           - '-storage.local.retention=6h'
           - '-storage.local.memory-chunks=500000'
@@ -314,7 +314,7 @@ spec:
         role: db
     spec:
       containers:
-        - image: ${CONTAINER_INFRA_PREFIX:-docker.io/grafana/}grafana:${GRAFANA_TAG}
+        - image: ${CONTAINER_INFRA_PREFIX:-docker.io/grafana/}grafana:5.1.5
           imagePullPolicy: Always
           name: grafana
           env:
@@ -346,6 +346,19 @@ EOF
 )
 writeFile $grafanaService_file "$grafanaService_content"
 
+# Write the file for prometheus-monitoring namespace
+prometheusNamespace_file=/srv/magnum/kubernetes/monitoring/prometheusNamespace.yaml
+prometheusNamespace_content=$(cat <<EOF
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    name: prometheus-monitoring
+  name: prometheus-monitoring
+EOF
+)
+writeFile $prometheusNamespace_file "$prometheusNamespace_content"
+
 . /etc/sysconfig/heat-params
 
 # NOTE(flwang): Let's keep the same addons yaml file on all masters,
@@ -374,6 +387,13 @@ do
     echo "Waiting for Kubernetes API..."
     sleep 5
 done
+
+# Check if prometheus-monitoring namespace exist already before creating the namespace
+kubectl get namespace prometheus-monitoring
+if [ "$?" != "0" ] && \
+        [ -f "'''${PROMETHEUS_MON_BASE_DIR}'''/prometheusNamespace.yaml" ]; then
+    kubectl create -f  '''${PROMETHEUS_MON_BASE_DIR}'''/prometheusNamespace.yaml
+fi
 
 # Check if all resources exist already before creating them
 # Check if configmap Prometheus exists

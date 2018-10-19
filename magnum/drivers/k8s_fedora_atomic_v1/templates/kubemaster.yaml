@@ -399,6 +399,11 @@ parameters:
     type: string
     description: tag of grafana container
 
+  install_disabled:
+    type: boolean
+    description: Enable or disable atomic install
+    default: False
+
 resources:
 
   master_wait_handle:
@@ -511,6 +516,7 @@ resources:
             "$KUBE_SERVICE_ACCOUNT_PRIVATE_KEY": {get_param: kube_service_account_private_key}
             "$PROMETHEUS_TAG": {get_param: prometheus_tag}
             "$GRAFANA_TAG": {get_param: grafana_tag}
+            "$INSTALL_DISABLED": {get_param: install_disabled}
 
   install_openstack_ca:
     type: OS::Heat::SoftwareConfig
@@ -731,6 +737,21 @@ resources:
       config: {get_resource: kubernetes_dashboard}
       server: {get_resource: kube-master}
       actions: ['CREATE']
+
+  enable_endpoint_instance:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      config: {get_file: ../../common/templates/kubernetes/fragments/enable-endpoint-instance.sh}
+
+  enable_endpoint_instance_deployment:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      signal_transport: HEAT_SIGNAL
+      config: {get_resource: enable_endpoint_instance}
+      server: {get_resource: kube-master}
+      actions: ['CREATE']
+       
 
   ######################################################################
   #
